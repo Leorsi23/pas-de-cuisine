@@ -42,12 +42,12 @@ const FERRAMENTA = {
         items: {
           type: "object",
           properties: {
-            qtd: { type: ["number", "null"], description: "Número decimal (0.5 para meia). null quando não há quantidade (a gosto)." },
+            qtd: { type: "number", description: "Número decimal (0.5 para meia). Omita quando não há quantidade (a gosto)." },
             unidade: { type: "string", description: "g, kg, ml, l, xícara, colher de sopa, colher de chá, unidade, dente, maço, pitada, lata... vazio se for só contagem" },
             item: { type: "string", description: "O ingrediente, com o preparo se houver: 'cebola média picada'" },
             ajustar: { type: "boolean", description: "true para sal, pimenta, temperos, ervas, fermento, bicarbonato, açúcar de tempero e tudo 'a gosto': não escalam na mesma proporção" },
           },
-          required: ["qtd", "unidade", "item", "ajustar"],
+          required: ["unidade", "item", "ajustar"],
         },
       },
       passos: {
@@ -56,9 +56,9 @@ const FERRAMENTA = {
           type: "object",
           properties: {
             texto: { type: "string", description: "Um passo, claro e completo" },
-            timer_min: { type: ["number", "null"], description: "Minutos de espera/cozimento deste passo, se houver" },
+            timer_min: { type: "number", description: "Minutos de espera/cozimento deste passo. Omita se não houver." },
           },
-          required: ["texto", "timer_min"],
+          required: ["texto"],
         },
       },
       observacoes: { type: "string", description: "Dicas importantes da receita original. Vazio se não houver." },
@@ -168,8 +168,14 @@ Deno.serve(async (req) => {
     }),
   });
   if (!r.ok) {
-    console.error("Anthropic", r.status, await r.text());
-    return json({ erro: r.status === 429 || r.status === 529 ? "A IA está ocupada. Tente de novo em 1 minuto." : "A IA não respondeu. Tente de novo." }, 502);
+    const detalhe = await r.text();
+    console.error("Anthropic", r.status, detalhe);
+    let msg = "";
+    try { msg = JSON.parse(detalhe).error?.message || ""; } catch { /* ok */ }
+    if (r.status === 429 || r.status === 529) return json({ erro: "A IA está ocupada. Tente de novo em 1 minuto." }, 502);
+    if (r.status === 401) return json({ erro: "A chave da Anthropic cadastrada no Supabase não foi aceita." }, 502);
+    if (/credit|balance|spend|limit/i.test(msg)) return json({ erro: "O crédito ou o limite de gasto da Anthropic acabou." }, 502);
+    return json({ erro: `A IA recusou o pedido (${r.status}): ${msg.slice(0, 160)}` }, 502);
   }
   const resp = await r.json();
   const uso = resp.content?.find((c: { type: string }) => c.type === "tool_use");
