@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dê sua nota · Pas de Cuisine</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f6ecea">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500..700;1,6..96,500..700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  body { padding-bottom: 24px; }
+  .av h1 { font-family: var(--display); font-weight: 600; font-size: clamp(1.8rem, 8vw, 2.3rem); line-height: 1.1; }
+  .av .marca { font-family: var(--display); font-style: italic; color: var(--rosa); font-size: 1.1rem; margin: 0 0 6px; }
+  .av .prato { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 16px; margin: 16px 0 6px; background: var(--rosa-claro); }
+  .estrelas-in { display: flex; gap: 6px; margin: 4px 0 6px; }
+  .estrelas-in label { margin: 0; }
+  .estrelas-in input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .estrelas-in span { display: grid; place-items: center; width: 54px; height: 54px; font-size: 2.2rem; color: var(--linha); cursor: pointer; border-radius: 12px; }
+  .estrelas-in input:focus-visible + span { outline: 3px solid var(--rosa); }
+  .estrelas-in span.on { color: var(--mel); }
+  .legenda { color: var(--suave); min-height: 1.5em; margin: 0 0 16px; font-weight: 500; }
+  fieldset legend { font-family: var(--texto); font-size: .95rem; font-weight: 600; }
+  .fim { text-align: center; padding: 40px 0; }
+  .fim h1 { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<main id="view" class="av"><p class="carregando">Abrindo…</p></main>
+<script type="module">
+import { CONFIG } from "./js/config.js";
+const DEMO_KEY = "pas-de-cuisine-demo-v1";
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const token = new URLSearchParams(location.hash.slice(1)).get("t") || "";
+const demo = new URLSearchParams(location.search).has("demo");
+const LEGENDAS = ["", "Não deu certo", "Precisa melhorar bastante", "Ficou bom", "Ficou muito bom", "Perfeito"];
+
+let rpc;
+if (demo) {
+  const ler = () => JSON.parse(localStorage.getItem(DEMO_KEY) || "{}");
+  rpc = async (fn, a) => {
+    const s = ler(); const c = (s.convites || {})[a.p_token];
+    if (!c) return { ok: false, motivo: "inexistente" };
+    if (fn === "ver_convite") return { ok: true, titulo: c.titulo, foto_url: c.foto_url, feito_em: s.preparos[c.preparo_id]?.feito_em };
+    s.avaliacoes = (s.avaliacoes || []).filter((x) => !(x.preparo_id === c.preparo_id && x.nome.trim().toLowerCase() === a.p_nome.trim().toLowerCase()));
+    s.avaliacoes.push({ id: String(Date.now()), preparo_id: c.preparo_id, nome: a.p_nome.trim(), nota: a.p_nota, melhorar: a.p_melhorar.trim(), criada_em: new Date().toISOString() });
+    localStorage.setItem(DEMO_KEY, JSON.stringify(s));
+    return { ok: true };
+  };
+} else {
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm");
+  const sb = createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey, { auth: { persistSession: false } });
+  rpc = async (fn, a) => { const { data, error } = await sb.rpc(fn, a); if (error) throw error; return data; };
+}
+
+function erro(titulo, texto) {
+  $("#view").innerHTML = `<div class="fim"><p class="marca">Pas de Cuisine</p><h1>${esc(titulo)}</h1><p class="sub">${esc(texto)}</p></div>`;
+}
+
+async function abrir() {
+  if (!token) return erro("Link incompleto", "Peça para a Alice mandar o link de novo.");
+  let c;
+  try { c = await rpc("ver_convite", { p_token: token }); } catch (e) { return erro("Sem conexão", "Confira a internet e abra o link de novo."); }
+  if (!c.ok) return erro(c.motivo === "expirado" ? "Este link já fechou" : "Link não encontrado", "Peça para a Alice mandar um link novo.");
+  let nome = ""; try { nome = localStorage.getItem("pdc-nome") || ""; } catch (e) { /* ok */ }
+  $("#view").innerHTML = `
+    <p class="marca">Pas de Cuisine</p>
+    <h1>A Alice fez ${esc(c.titulo)}</h1>
+    ${c.foto_url ? `<img class="prato" src="${esc(c.foto_url)}" alt="Foto do prato">` : ""}
+    <p class="sub">Dê uma nota sincera. É assim que ela melhora.</p>
+    <form id="f" class="importar">
+      <fieldset style="margin:0">
+        <legend>Sua nota</legend>
+        <div class="estrelas-in" role="radiogroup">
+          ${[1, 2, 3, 4, 5].map((n) => `<label><input type="radio" name="nota" value="${n}" aria-label="${n} de 5: ${LEGENDAS[n]}" required><span data-n="${n}">★</span></label>`).join("")}
+        </div>
+        <p class="legenda" id="leg"></p>
+      </fieldset>
+      <label>O que ela pode melhorar?<textarea name="melhorar" rows="3" required minlength="3" maxlength="600" placeholder="Ex.: o arroz podia estar mais soltinho"></textarea></label>
+      <label>Seu nome<input name="nome" required minlength="2" maxlength="40" value="${esc(nome)}" autocomplete="given-name"></label>
+      <p class="erro" id="err" role="alert"></p>
+      <button class="btn grande" type="submit">Enviar nota</button>
+    </form>`;
+  const f = $("#f");
+  const pintar = (n) => { document.querySelectorAll(".estrelas-in span").forEach((s) => s.classList.toggle("on", +s.dataset.n <= n)); $("#leg").textContent = LEGENDAS[n] || ""; };
+  f.querySelectorAll("[name=nota]").forEach((r) => r.addEventListener("change", () => pintar(+r.value)));
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector("button"); btn.disabled = true; btn.textContent = "Enviando…"; $("#err").textContent = "";
+    try {
+      const r = await rpc("avaliar", { p_token: token, p_nome: f.nome.value, p_nota: +f.nota.value, p_melhorar: f.melhorar.value });
+      if (!r.ok) throw new Error(r.motivo);
+      try { localStorage.setItem("pdc-nome", f.nome.value.trim()); } catch (e2) { /* ok */ }
+      $("#view").innerHTML = `<div class="fim"><p class="marca">Pas de Cuisine</p><h1>Nota enviada</h1><p class="sub">Obrigado, ${esc(f.nome.value.trim())}. A Alice já pode ver o que você escreveu. Se quiser mudar, abra o link de novo e envie com o mesmo nome.</p></div>`;
+    } catch (err) {
+      $("#err").textContent = err.message && !/fetch/i.test(err.message) ? err.message : "Não consegui enviar. Confira a internet e tente de novo.";
+      btn.disabled = false; btn.textContent = "Enviar nota";
+    }
+  });
+}
+abrir();
+</script>
+</body>
+</html>
