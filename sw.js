@@ -1,6 +1,6 @@
 // Cache simples: o app abre mesmo sem internet (as receitas já carregadas
 // continuam na tela). Ao mudar arquivos, aumente a versão abaixo.
-const CACHE = "pdc-v1";
+const CACHE = "pdc-v2";
 const FILES = ["./", "index.html", "avaliar.html", "css/app.css", "js/app.js", "js/config.js", "js/store.js", "js/receita.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {

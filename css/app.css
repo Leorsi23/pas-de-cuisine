@@ -244,7 +244,7 @@ legend { font-family: var(--display); font-weight: 600; font-size: 1.25rem; marg
 .cab-receita { margin-top: 4px; }
 .porcoes { display: flex; align-items: center; gap: 10px; background: var(--papel); border-radius: 999px; padding: 6px 8px 6px 18px; box-shadow: inset 0 0 0 1px var(--linha); width: max-content; max-width: 100%; font-weight: 600; }
 .porcoes .pm { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--rosa-claro); font-size: 1.4rem; font-weight: 600; cursor: pointer; }
-.porcoes output { font-family: var(--display); font-size: 1.7rem; font-weight: 700; min-width: 1.6ch; text-align: center; }
+.porcoes output { font-family: var(--texto); font-size: 1.5rem; font-weight: 700; min-width: 1.6ch; text-align: center; }
 .avisos { list-style: none; margin: 12px 0 0; padding: 10px 12px; background: var(--mel-claro); color: var(--mel); border-radius: 10px; font-size: .92rem; }
 .avisos li + li { margin-top: 6px; }
 #avisos:not(:empty) + h2 { margin-top: 18px; }
@@ -276,7 +276,7 @@ legend { font-family: var(--display); font-weight: 600; font-size: 1.25rem; marg
 .timers { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .timer-on { display: flex; align-items: center; gap: 12px; background: var(--papel); border-radius: 999px; padding: 4px 4px 4px 18px; box-shadow: inset 0 0 0 1.5px var(--rosa); }
 .timer-on span { flex: 1; color: var(--suave); font-weight: 600; }
-.timer-on strong { font-family: var(--display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.timer-on strong { font-family: var(--texto); font-weight: 700; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 .timer-on.fim { background: var(--rosa); color: #fff; animation: pulso 1s infinite alternate; }
 .timer-on.fim span, .timer-on.fim .icone { color: #fff; }
 @keyframes pulso { to { transform: scale(1.02); } }
