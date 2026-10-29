@@ -43,6 +43,7 @@ body {
   padding-bottom: calc(76px + env(safe-area-inset-bottom));
 }
 main { max-width: 560px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px 24px; outline: none; }
+main:focus, main:focus-visible { outline: none; }
 h1, h2, h3, h4 { margin: 0; line-height: 1.15; }
 a { color: var(--rosa); }
 img { max-width: 100%; display: block; }

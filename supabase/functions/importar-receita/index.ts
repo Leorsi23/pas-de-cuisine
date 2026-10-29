@@ -73,7 +73,8 @@ const INSTRUCOES = `Você extrai receitas para o caderno de uma estudante brasil
 - Divida o modo de preparo em passos curtos e numeráveis, na ordem. Não invente passos nem ingredientes que não estão no material.
 - Se um passo tem tempo de forno ou de cozimento, coloque os minutos em timer_min.
 - Ignore propaganda, comentários de leitores e histórias pessoais do blog.
-- Se o material não tiver receita, use encontrou=false e deixe o resto vazio.`;
+- Se o material não tiver receita, use encontrou=false e deixe o resto vazio.
+- Responda SEMPRE chamando a ferramenta salvar_receita, uma única vez, sem escrever mais nada.`;
 
 function htmlParaTexto(html: string): string {
   // Primeiro tenta os dados estruturados que quase todo site de receita tem (JSON-LD "Recipe").
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
       max_tokens: 4096,
       system: INSTRUCOES,
       tools: [FERRAMENTA],
-      tool_choice: { type: "tool", name: "salvar_receita" },
+      tool_choice: { type: "auto" },
       messages: [{ role: "user", content: conteudo }],
     }),
   });
@@ -178,7 +179,13 @@ Deno.serve(async (req) => {
     return json({ erro: `A IA recusou o pedido (${r.status}): ${msg.slice(0, 160)}` }, 502);
   }
   const resp = await r.json();
-  const uso = resp.content?.find((c: { type: string }) => c.type === "tool_use");
+  let uso = resp.content?.find((c: { type: string }) => c.type === "tool_use");
+  if (!uso?.input) {
+    // Plano B: a IA respondeu em texto com um JSON
+    const texto = (resp.content || []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join("\n");
+    const m = texto.match(/\{[\s\S]*\}/);
+    try { if (m) uso = { input: JSON.parse(m[0]) }; } catch { /* sem JSON */ }
+  }
   if (!uso?.input) return json({ erro: "Não consegui ler a receita. Tente outra foto." }, 422);
   if (uso.input.encontrou === false) return json({ erro: "Não achei uma receita nesse material." }, 422);
   if (corpo.tipo === "link") uso.input.fonte = corpo.url;
